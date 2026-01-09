@@ -1,0 +1,24 @@
+RewriteEngine On
+
+RewriteRule ^login$ login.php [L]
+RewriteRule ^lockscreen$ lockscreen.php [L]
+RewriteRule ^logout$ login.php?act=logout [L]
+RewriteRule ^Home$ index.php?p=Home [L]
+RewriteRule ^DataMutasi$ index.php?p=DataMutasi [L]
+RewriteRule ^TransferOut$ index.php?p=TransferOut [L]
+RewriteRule ^Mutasi$ index.php?p=Mutasi [L]
+RewriteRule ^HapusMutasi$ index.php?p=HapusMutasi [L]
+RewriteRule ^HapusMutasi-$ index.php?p=HapusMutasi [L]
+RewriteRule ^HapusMutasi-([0-9_]+)$ index.php?p=HapusMutasi&no_mutasi=$1 [L]
+RewriteRule ^PengirimanKain$ index.php?p=PengirimanKain [L]
+RewriteRule ^BongkaranKain$ index.php?p=BongkaranKain [L]
+RewriteRule ^MutasiKain$ index.php?p=MutasiKain [L]
+RewriteRule ^PersediaanKain$ index.php?p=PersediaanKain [L]
+RewriteRule ^MasukKain$ index.php?p=MasukKain [L]
+RewriteRule ^KeluarKain$ index.php?p=KeluarKain [L]
+RewriteRule ^CekKainProject$ index.php?p=CekKainProject [L]
+RewriteRule ^CekKainDemand$ index.php?p=CekKainDemand [L]
+RewriteRule ^CekKainDemandTemQTY$ index.php?p=CekKainDemandTemQTY [L]
+RewriteRule ^DelMutasi-([0-9_]+)$ index.php?p=ProsesHapusMutasi&id=$1 [L]
+
+Options All -Indexes
