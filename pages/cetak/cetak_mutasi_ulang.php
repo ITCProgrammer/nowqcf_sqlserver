@@ -36,32 +36,44 @@ border:hidden;
     <table width="100%" border="0" class="table-list1">
       <tr>
         <?php    
-    $lth=mysqli_query($con,"SELECT *,now() as tgl_skrng FROM tbl_mutasi_kain WHERE no_mutasi='$_GET[mutasi]'");
-    $rowlth=mysqli_fetch_array($lth);
-    ?>
+          $lth=sqlsrv_query($con,"SELECT *, GETDATE() as tgl_skrng 
+              FROM dbnow_qcf.tbl_mutasi_kain 
+              WHERE no_mutasi='$_GET[mutasi]'
+          ");
+          // if ($lth === false) {
+          //   die(print_r(sqlsrv_errors(), true));
+          // }
+
+          $rowlth=sqlsrv_fetch_array($lth);
+        ?>
         <div align="center">
           <h2>SERAH TERIMA KAIN TAHANAN</h2>
         </div>
         <?php ?>
         <td colspan="21"><table width="100%" class="table-list1">
           <tr>
-            <td width="79%"><b>Tanggal : <?php echo date("d F Y", strtotime($rowlth['tgl_mutasi']));?> <br>
+            <td width="79%"><b>Tanggal : <?php echo $rowlth['tgl_mutasi']->format('d F Y'); ?> <br>
               GROUP SHIFT:
               <?php
- echo $rowlth['gshift']; ?>
-              <br>
-              SHIFT :
+                echo $rowlth['gshift']; 
+              ?>
+              <br> SHIFT :
               <?php
-  /* if(date("H:i:s",strtotime($rowlth['tanggal_update']))>="23:00:00" && date("H:i:s",strtotime($rowlth['tanggal_update']))<="06:59:59")
-  {$rsift=3;}
-  else  */if (date("H:i:s", strtotime($rowlth['tgl_mutasi']))>="07:00:00" && date("H:i:s", strtotime($rowlth['tgl_mutasi']))<="14:59:59") {
-      $rsift=1;
-  } elseif (date("H:i:s", strtotime($rowlth['tgl_mutasi']))>="15:00:00" && date("H:i:s", strtotime($rowlth['tgl_mutasi']))<="22:59:59") {
-      $rsift=2;
-  } else {
-      $rsift=3;
-  }
- echo $rsift;?>
+                  /* if(date("H:i:s",strtotime($rowlth['tanggal_update']))>="23:00:00" && date("H:i:s",strtotime($rowlth['tanggal_update']))<="06:59:59")
+                  {$rsift=3;}
+                  else  */
+                  $jam = $rowlth['tgl_mutasi']->format('H:i:s');
+
+                  if ($jam >= "07:00:00" && $jam <= "14:59:59") {
+                      $rsift = 1;
+                  } elseif ($jam >= "15:00:00" && $jam <= "22:59:59") {
+                      $rsift = 2;
+                  } else {
+                      $rsift = 3;
+                  }
+
+                echo $rsift;
+              ?>
               <br>
               No Mutasi : <?php echo $rowlth['no_mutasi'];?></b></td>
             <td width="21%"><table width="100%" border="0" class="table-list1">
@@ -99,10 +111,11 @@ border:hidden;
         <td colspan="4" bgcolor="#F5F5F5">Netto (KG)</td>
         <td rowspan="3" bgcolor="#F5F5F5">
           <?php if ($rowlth['gshift']=="KRAH") {
-     echo "PCS";
- } else {
-     echo "Yard / Meter";
- } ?>
+                echo "PCS";
+            } else {
+                echo "Yard / Meter";
+            } 
+          ?>
         </td>
         <td rowspan="3" bgcolor="#F5F5F5">Prd. Demand</td>
         <td rowspan="3" bgcolor="#F5F5F5">Tempat</td>
@@ -117,32 +130,53 @@ border:hidden;
         <td bgcolor="#F5F5F5"> C</td>
       </tr>
       <?php 
- $sql=mysqli_query($con,"SELECT *,count(b.transid) as jmlrol,a.transid as kdtrans, 
-SUM(if(b.grade=1,weight,0)) as grade_a,SUM(if(b.grade=2,weight,0)) as grade_b,
-SUM(if(b.grade=3,weight,0)) as grade_c,
-SUM(if(b.grade=1 or b.grade=2,1,0)) as rol_ab,SUM(if(b.grade=3,1,0)) as rol_c,
-sum(b.`length`) as panjang, group_concat(distinct b.ket_c) as ketc FROM tbl_mutasi_kain a 
-LEFT JOIN tbl_prodemand b ON a.transid=b.transid 
-WHERE a.no_mutasi='$_GET[mutasi]'
-GROUP BY a.transid");
-$totqty=0;
-$totqty1=0;
-$grab=0;
-$grc=0;
-  while ($row=mysqli_fetch_array($sql)) {
-	 $sqlDB2 = " SELECT LANGGANAN, BUYER, PO_NUMBER, QTY_BRUTO , SALESORDERCODE, NO_ITEM, 
-SUBCODE02, SUBCODE03 ,ITEMDESCRIPTION ,LEBAR, GRAMASI,PRODUCTIONORDERCODE,
-WARNA ,NO_WARNA FROM ITXVIEWLAPORANAFTERSALESHEADER WHERE CODE ='$row[demandcode]' GROUP BY CODE,NO_WARNA,WARNA,LANGGANAN, BUYER, PO_NUMBER, SALESORDERCODE, NO_ITEM, 
-SUBCODE02, SUBCODE03 ,ITEMDESCRIPTION ,LEBAR, GRAMASI,PRODUCTIONORDERCODE,QTY_BRUTO ";
-$stmt   = db2_exec($conn1,$sqlDB2, array('cursor'=>DB2_SCROLLABLE));
-$rowdb2 = db2_fetch_assoc($stmt);
-	if($rowdb2['NO_ITEM']!=""){
-		$item=$rowdb2['NO_ITEM'];
-	}else{
-		$item=trim($rowdb2['SUBCODE02'])."".trim($rowdb2['SUBCODE03']);
-	}
-	  
-       ?>
+        $query = " SELECT 
+            a.transid AS kdtrans,
+
+            MAX(b.demandcode) AS demandcode,
+            MAX(b.no_mc) AS no_mc,
+            MAX(b.satuan) AS satuan,
+
+            COUNT(b.transid) AS jmlrol,
+
+            SUM(CASE WHEN b.grade = 'A' THEN b.weight ELSE 0 END) AS grade_a,
+            SUM(CASE WHEN b.grade = 'B' THEN b.weight ELSE 0 END) AS grade_b,
+            SUM(CASE WHEN b.grade = 'C' THEN b.weight ELSE 0 END) AS grade_c,
+
+            SUM(CASE WHEN b.grade IN ('A','B') THEN 1 ELSE 0 END) AS rol_ab,
+            SUM(CASE WHEN b.grade = 'C' THEN 1 ELSE 0 END) AS rol_c,
+
+            SUM(b.[length]) AS panjang,
+            STRING_AGG(b.ket_c, ',') AS ketc
+        FROM dbnow_qcf.tbl_mutasi_kain a
+        LEFT JOIN dbnow_qcf.tbl_prodemand b 
+            ON a.transid = b.transid
+        WHERE a.no_mutasi = ?
+        GROUP BY a.transid;
+      ";
+      $sql = sqlsrv_query($con, $query, [$_GET['mutasi']]);
+
+          if ($sql === false) {
+              die(print_r(sqlsrv_errors(), true));
+          }
+
+        $totqty=0;
+        $totqty1=0;
+        $grab=0;
+        $grc=0;
+          while ($row = sqlsrv_fetch_array($sql, SQLSRV_FETCH_ASSOC)) {
+          $sqlDB2 = " SELECT LANGGANAN, BUYER, PO_NUMBER, QTY_BRUTO , SALESORDERCODE, NO_ITEM, 
+        SUBCODE02, SUBCODE03 ,ITEMDESCRIPTION ,LEBAR, GRAMASI,PRODUCTIONORDERCODE,
+        WARNA ,NO_WARNA FROM ITXVIEWLAPORANAFTERSALESHEADER WHERE CODE ='$row[demandcode]' GROUP BY CODE,NO_WARNA,WARNA,LANGGANAN, BUYER, PO_NUMBER, SALESORDERCODE, NO_ITEM, 
+        SUBCODE02, SUBCODE03 ,ITEMDESCRIPTION ,LEBAR, GRAMASI,PRODUCTIONORDERCODE,QTY_BRUTO ";
+        $stmt   = db2_exec($conn1,$sqlDB2, array('cursor'=>DB2_SCROLLABLE));
+        $rowdb2 = db2_fetch_assoc($stmt);
+          if($rowdb2['NO_ITEM']!=""){
+            $item=$rowdb2['NO_ITEM'];
+          }else{
+            $item=trim($rowdb2['SUBCODE02'])."".trim($rowdb2['SUBCODE03']);
+          }
+      ?>
       <tr>
         <td>
           <font size="-2">
@@ -200,7 +234,7 @@ $rowdb2 = db2_fetch_assoc($stmt);
       } else {
           $rol1=$row['rol_ab'];
       }
-      echo $rol1;?>
+        echo $rol1;?>
           </font>
         </td>
         <td align="right">
@@ -235,7 +269,8 @@ $rowdb2 = db2_fetch_assoc($stmt);
           echo "<center>-</center>";
       } else {
           echo number_format($row['panjang'], '2', '.', ',')." ".$row['satuan'];
-      } ?>
+      } 
+    ?>
           </font>
         </td>
         <td><font size="-2"><?php echo $row['demandcode']; ?></font></td>
@@ -388,10 +423,10 @@ $rowdb2 = db2_fetch_assoc($stmt);
       <tr>
         <td>Tanggal</td>
         <td colspan="-1" align="center">
-          <?php echo date("d-M-Y", strtotime($rowlth['tgl_mutasi']));?>
+          <?php echo $rowlth['tgl_mutasi']->format('d M Y'); ?>
         </td>
         <td colspan="-1" align="center">
-          <?php echo date("d-M-Y", strtotime($rowlth['tgl_mutasi']));?>
+          <?php echo $rowlth['tgl_mutasi']->format('d M Y'); ?>
         </td>
       </tr>
       <tr>
@@ -406,7 +441,7 @@ $rowdb2 = db2_fetch_assoc($stmt);
       </tr>
   </table>
     <b>PrintDate :
-      <?php echo date("d F Y H:i:s", strtotime($rowlth['tgl_skrng']));?></b>
+    <?php echo $rowlth['tgl_skrng']->format('d F Y H:i:s'); ?></b>
     <script>
       alert('cetak');
       window.print();

@@ -56,20 +56,44 @@ $Demand	= isset($_POST['demandno']) ? $_POST['demandno'] : '';
                     </tr>
                   </thead>
                   <tbody>
-	<?php
-if($Demand!=""){
-	$WDemand=" AND b.demandcode='$Demand' ";
-}else{ $WDemand=""; }	 
-if($Mutasi!=""){
-	$WMutasi=" AND a.no_mutasi='$Mutasi' ";
-}else{ $WMutasi=""; }
-$no=1;   
-$c=0;
-$sql=mysqli_query($con,"SELECT a.no_mutasi, group_concat( distinct b.demandcode) as demand  FROM tbl_mutasi_kain a
-left join tbl_prodemand b on a.transid=b.transid  
-WHERE not isnull(a.no_mutasi) $WMutasi $WDemand GROUP BY a.no_mutasi LIMIT 100");
-while($r=mysqli_fetch_array($sql)){				  
-	   ?>				  
+	  <?php
+      if($Demand!=""){
+          $WDemand = " AND EXISTS (
+                  SELECT 1
+                  FROM dbnow_qcf.tbl_mutasi_kain a2
+                  JOIN dbnow_qcf.tbl_prodemand b2
+                      ON a2.transid = b2.transid
+                  WHERE a2.no_mutasi = a.no_mutasi
+                    AND b2.demandcode = '$Demand'
+              )
+          ";
+      }else{
+          $WDemand = "";
+      }
+
+      if($Mutasi!=""){
+        $WMutasi=" AND a.no_mutasi='$Mutasi' ";
+      }else{ $WMutasi=""; }
+      $no=1;   
+      $c=0;
+      $sql = sqlsrv_query($con," SELECT TOP 100 a.no_mutasi,
+              STUFF((
+                  SELECT DISTINCT ',' + b2.demandcode
+                  FROM dbnow_qcf.tbl_mutasi_kain a2
+                  JOIN dbnow_qcf.tbl_prodemand b2
+                      ON a2.transid = b2.transid
+                  WHERE a2.no_mutasi = a.no_mutasi
+                  ".($Demand != "" ? " AND b2.demandcode = '$Demand' " : "")."
+                  FOR XML PATH(''), TYPE
+              ).value('.', 'NVARCHAR(MAX)'), 1, 1, '') AS demand
+          FROM dbnow_qcf.tbl_mutasi_kain a
+          WHERE a.no_mutasi IS NOT NULL
+              $WMutasi
+              $WDemand
+          GROUP BY a.no_mutasi
+      ");
+      while($r=sqlsrv_fetch_array($sql)){				  
+	  ?>
 	  <tr>
       <td style="text-align: center"><?php echo $no; ?></td>
       <td style="text-align: center"><?php echo $r['no_mutasi']; ?></td>

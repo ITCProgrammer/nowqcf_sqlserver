@@ -24,10 +24,20 @@ else{
 
 //$con=mysqli_connect("10.0.0.10","dit","4dm1n","db_dying");
 //$cond=mysqli_connect("10.0.0.10","dit","4dm1n","db_qc");
-$con=mysqli_connect("10.0.0.10","dit","4dm1n","dbnow_qcf");
-if (mysqli_connect_errno()) {
-printf("Connect failed: %s\n", mysqli_connect_error());
-exit();
-} 
+// $con=mysqli_connect("10.0.0.10","dit","4dm1n","dbnow_qcf");
+// if (mysqli_connect_errno()) {
+// printf("Connect failed: %s\n", mysqli_connect_error());
+// exit();
+// } 
 
+    $hostSVR19      = "10.0.0.221";
+    $usernameSVR19  = "sa";
+    $passwordSVR19  = "Ind@taichen2024";
+    $nowqcf         = "dbnow_qcf";
+    $dbnow_qcf      = array("Database" => $nowqcf, "UID" => $usernameSVR19, "PWD" => $passwordSVR19);
+    $con            = sqlsrv_connect($hostSVR19, $dbnow_qcf);
+
+    if ($con === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
 ?>
