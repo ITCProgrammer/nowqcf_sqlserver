@@ -88,18 +88,47 @@ $Gshift	= isset($_POST['gshift']) ? $_POST['gshift'] : '';
                     </tr>
                   </thead>
                   <tbody>
-				  <?php
-	 
-$no=1;   
-$c=0;
-$sql=mysqli_query($con,"SELECT *,count(b.transid) as jmlrol,a.transid as kdtrans, 
-SUM(if(b.grade=1 or b.grade=2,weight,0)) as grade_ab,SUM(if(b.grade=3,weight,0)) as grade_c,
-SUM(if(b.grade=1 or b.grade=2,1,0)) as rol_ab,SUM(if(b.grade=3,1,0)) as rol_c,
-sum(b.`length`) as panjang, group_concat(distinct b.ket_c) as ketc FROM tbl_mutasi_kain a 
-LEFT JOIN tbl_prodemand b ON a.transid=b.transid 
-WHERE isnull(a.no_mutasi) AND a.tujuan='GUDANG TAHANAN' AND date_format(a.tgl_buat ,'%Y-%m-%d')='$Awal' AND a.gshift='$Gshift'
-GROUP BY a.transid");
-while($r=mysqli_fetch_array($sql)){		
+				  <?php	 
+            $no=1;   
+            $c=0;
+            $sqlText = " SELECT
+                  a.transid AS kdtrans,
+                  b.no_mc,
+                  b.demandcode,
+                  COUNT(b.transid) AS jmlrol,
+                  SUM(CASE WHEN CAST(b.grade AS varchar(10)) IN ('A','B') THEN b.[weight] ELSE 0 END) AS grade_ab,
+                  SUM(CASE WHEN CAST(b.grade AS varchar(10)) = 'C' THEN b.[weight] ELSE 0 END)       AS grade_c,
+                  SUM(CASE WHEN CAST(b.grade AS varchar(10)) IN ('A','B') THEN 1 ELSE 0 END) AS rol_ab,
+                  SUM(CASE WHEN CAST(b.grade AS varchar(10)) = 'C' THEN 1 ELSE 0 END)       AS rol_c,
+                  SUM(b.[length]) AS panjang,
+                  MAX(ket.ketc) AS ketc
+              FROM dbnow_qcf.tbl_mutasi_kain a
+              LEFT JOIN dbnow_qcf.tbl_prodemand b
+                  ON a.transid = b.transid
+              OUTER APPLY (
+                  SELECT STUFF((
+                      SELECT DISTINCT ',' + b2.ket_c
+                      FROM dbnow_qcf.tbl_prodemand b2
+                      WHERE b2.transid = a.transid
+                        AND b2.ket_c IS NOT NULL
+                      FOR XML PATH(''), TYPE
+                  ).value('.', 'nvarchar(max)'), 1, 1, '') AS ketc
+              ) ket
+              WHERE
+                  a.no_mutasi IS NULL
+                  AND a.tujuan = 'GUDANG TAHANAN'
+                  AND CONVERT(date, a.tgl_buat) = ?
+                  AND a.gshift = ?
+              GROUP BY
+                  a.transid, b.no_mc, b.demandcode
+              ";
+              $params = [$Awal, $Gshift];
+              $sql = sqlsrv_query($con, $sqlText, $params);
+
+            if ($sql === false) {
+              echo '<pre>'; print_r(sqlsrv_errors()); echo '</pre>'; exit;
+            }
+while($r=sqlsrv_fetch_array($sql)){		
 	
 $sqlDB2 = " SELECT LANGGANAN, BUYER, PO_NUMBER, SALESORDERCODE, NO_ITEM, 
 SUBCODE02, SUBCODE03 ,ITEMDESCRIPTION ,LEBAR, GRAMASI,PRODUCTIONORDERCODE,
@@ -134,8 +163,8 @@ $rowdb2 = db2_fetch_assoc($stmt);
           $rol1=$r['rol_ab'];
       }
       echo $rol1;?></td>
-      <td><?php echo $r['grade_ab'];?></td>
-      <td><?php echo $r['grade_c'];?></td>
+      <td><?php echo number_format((float)($r['grade_ab'] ?? 0), 2, '.', ''); ?></td>
+      <td><?php echo number_format((float)($r['grade_c'] ?? 0), 2, '.', ''); ?></td>
       <td style="text-align: left"><?php echo $r['ketc'];?></td>
       <td><?php echo $r['panjang'];?></td>
       <td><?php echo $rowdb2['PRODUCTIONORDERCODE']; ?></td>
@@ -196,12 +225,12 @@ if($_POST['mutasikain']=="MutasiKain"){
 function mutasiurut(){
 include "koneksi.php";		
 $format = "20".date("ymd");
-$sql=mysqli_query($con,"SELECT no_mutasi FROM tbl_mutasi_kain WHERE substr(no_mutasi,1,8) like '%".$format."%' ORDER BY no_mutasi DESC LIMIT 1 ") or die (mysql_error());
-$d=mysqli_num_rows($sql);
+$sql=sqlsrv_query($con,"SELECT TOP 1 no_mutasi FROM dbnow_qcf.tbl_mutasi_kain WHERE SUBSTRING(no_mutasi,1,8) like '%".$format."%' ORDER BY no_mutasi DESC ") or die(print_r(sqlsrv_errors(), true));
+$d=sqlsrv_num_rows($sql);
 if($d>0){
-$r=mysqli_fetch_array($sql);
+$r=sqlsrv_fetch_array($sql);
 $d=$r['no_mutasi'];
-$str=substr($d,8,2);
+$str=SUBSTRING($d,8,2);
 $Urut = (int)$str;
 }else{
 $Urut = 0;
@@ -217,26 +246,47 @@ return $tidbr;
 }
 $nomid=mutasiurut();	
 
-$sql1=mysqli_query($con,"SELECT *,count(b.transid) as jmlrol,a.transid as kdtrans FROM tbl_mutasi_kain a 
-LEFT JOIN tbl_prodemand b ON a.transid=b.transid 
-WHERE isnull(a.no_mutasi) AND date_format(a.tgl_buat ,'%Y-%m-%d')='$Awal' AND a.gshift='$Gshift' 
-GROUP BY a.transid");
-$n1=1;
-$noceklist1=1;	
-while($r1=mysqli_fetch_array($sql1)){	
-	if($_POST['cek'][$n1]!='') 
-		{
-		$transid1 = $_POST['cek'][$n1];
-		mysqli_query($con,"UPDATE tbl_mutasi_kain SET
-		no_mutasi='$nomid',
-		tgl_mutasi=now()
-		WHERE transid='$transid1'
-		");
-		}else{
-			$noceklist1++;
-	}
-	$n1++;
-	}
+$sqlText1 = " SELECT
+    a.transid AS kdtrans,
+    COUNT(b.transid) AS jmlrol
+  FROM dbnow_qcf.tbl_mutasi_kain a
+  LEFT JOIN dbnow_qcf.tbl_prodemand b
+    ON a.transid = b.transid
+  WHERE
+    a.no_mutasi IS NULL
+    AND CONVERT(date, a.tgl_buat) = ?
+    AND a.gshift = ?
+  GROUP BY
+    a.transid
+  ORDER BY a.transid;
+";
+
+$sql1 = sqlsrv_query($con, $sqlText1, [$Awal, $Gshift]);
+if ($sql1 === false) { echo "<pre>"; print_r(sqlsrv_errors()); echo "</pre>"; exit; }
+
+$n1 = 1;
+$noceklist1 = 1;
+
+while ($r1 = sqlsrv_fetch_array($sql1, SQLSRV_FETCH_ASSOC)) {
+
+  if (!empty($_POST['cek'][$n1])) {
+
+    $transid1 = $_POST['cek'][$n1];
+
+    $updText = " UPDATE dbnow_qcf.tbl_mutasi_kain
+      SET no_mutasi = ?, tgl_mutasi = GETDATE()
+      WHERE transid = ?;
+    ";
+
+    $upd = sqlsrv_query($con, $updText, [$nomid, $transid1]);
+    if ($upd === false) { echo "<pre>"; print_r(sqlsrv_errors()); echo "</pre>"; exit; }
+
+  } else {
+    $noceklist1++;
+  }
+  $n1++;
+}
+
 if($noceklist1==$n1){
 	echo "<script>
   	$(function() {
