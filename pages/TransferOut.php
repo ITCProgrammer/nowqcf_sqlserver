@@ -214,8 +214,8 @@ if($_POST['cekdata']=="CekData"){
    	$stmt4   = db2_exec($conn1,$sqlDB24, array('cursor'=>DB2_SCROLLABLE));	
 	$rowdb24 = db2_fetch_assoc($stmt4);
 		
-	$sql1=mysqli_query($con,"SELECT itemelement FROM tbl_prodemand WHERE itemelement='$rowdb22[ELEMENTCODE]' LIMIT 1 ") or die (mysql_error());	
-	$r1=mysqli_fetch_array($sql1);
+	$sql1=sqlsrv_query($con,"SELECT TOP 1 itemelement FROM dbnow_qcf.tbl_prodemand WHERE itemelement='$rowdb22[ELEMENTCODE]'") or die(print_r(sqlsrv_errors(), true));
+	$r1=sqlsrv_fetch_array($sql1);
 	if($r1['itemelement']==""){	
 ?>
 	  <tr>
@@ -283,12 +283,12 @@ if($_POST['transferout']=="TransferOut"){
 function mutasiurut(){
 include "koneksi.php";		
 $format = "10".date("ymd");
-$sql=mysqli_query($con,"SELECT transid FROM tbl_prodemand WHERE substr(transid,1,8) like '%".$format."%' ORDER BY transid DESC LIMIT 1 ") or die (mysql_error());
-$d=mysqli_num_rows($sql);
+$sql=sqlsrv_query($con,"SELECT TOP 1 transid FROM dbnow_qcf.tbl_prodemand WHERE SUBSTRING(transid,1,8) like '%".$format."%' ORDER BY transid DESC") or die(print_r(sqlsrv_errors(), true));
+$d=sqlsrv_num_rows($sql);
 if($d>0){
-$r=mysqli_fetch_array($sql);
+$r=sqlsrv_fetch_array($sql);
 $d=$r['transid'];
-$str=substr($d,8,2);
+$str=SUBSTRING($d,8,2);
 $Urut = (int)$str;
 }else{
 $Urut = 0;
@@ -349,20 +349,32 @@ $stmt0   = db2_exec($conn1,$sqlDB20, array('cursor'=>DB2_SCROLLABLE));
 		if($grade1=="C"){
 		$ketc=$rowdb203['LONGDESCRIPTION'];	
 		}else{$ketc="";}	
-		mysqli_query($con,"INSERT INTO tbl_prodemand SET
-		transid='$notid',
-		gshift='$Gshift',
-		demandcode='$rowdb201[DEMANDCODE]',
-		itemelement='$rowdb201[ELEMENTCODE]',
-		weight='$rowdb201[WEIGHTNET]',
-		length='$rowdb201[LENGTHGROSS]',
-		no_mc='$rowdb201[WINDINGMACHINE]',
-		grade='$grade1',
-		satuan='$rowdb201[LENGTHUOMCODE]',
-		ket='$rowdb202[LONGDESCRIPTION]',
-		ket_c='$ketc',
-		tgl_buat=now()
-		");
+		$sqlInsertProdemand = " INSERT INTO dbnow_qcf.tbl_prodemand (
+			transid, gshift, demandcode, itemelement,
+			weight, length, no_mc, grade,
+			satuan, ket, ket_c, tgl_buat
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())
+		";
+
+		$paramsProdemand = [
+			$notid,
+			$Gshift,
+			$rowdb201['DEMANDCODE'],
+			$rowdb201['ELEMENTCODE'],
+			$rowdb201['WEIGHTNET'],
+			$rowdb201['LENGTHGROSS'],
+			$rowdb201['WINDINGMACHINE'],
+			$grade1,
+			$rowdb201['LENGTHUOMCODE'],
+			$rowdb202['LONGDESCRIPTION'],
+			$ketc
+		];
+
+		$stmtProdemand = sqlsrv_query($con, $sqlInsertProdemand, $paramsProdemand);
+
+		if ($stmtProdemand === false) {
+			die("ERROR INSERT tbl_prodemand : <pre>" . print_r(sqlsrv_errors(), true) . "</pre>");
+		}
 	   }else{
 		$noceklist++;
 	}
@@ -385,16 +397,26 @@ echo "<script>
   });
   
 </script>";
-}
-	else{
-mysqli_query($con,"INSERT INTO tbl_mutasi_kain SET
-		transid='$notid',
-		ket='$Ket',
-		tujuan='$TransF',
-		gshift='$Gshift',
-		tgl_buat=now()
-		");
-	
+}else{
+	$sqlInsertMutasi = "
+	INSERT INTO dbnow_qcf.tbl_mutasi_kain (
+		transid, ket, tujuan, gshift, tgl_buat
+	) VALUES (?, ?, ?, ?, GETDATE())
+	";
+
+	$paramsMutasi = [
+		$notid,
+		$Ket,
+		$TransF,
+		$Gshift
+	];
+
+	$stmtMutasi = sqlsrv_query($con, $sqlInsertMutasi, $paramsMutasi);
+
+	if ($stmtMutasi === false) {
+		die("ERROR INSERT tbl_mutasi_kain : <pre>" . print_r(sqlsrv_errors(), true) . "</pre>");
+	}
+
  echo "<script>
   	$(function() {
     const Toast = Swal.mixin({
