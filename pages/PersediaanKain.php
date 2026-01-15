@@ -1,9 +1,20 @@
 <?php
-$conGKJ=mysqli_connect("10.0.0.10","dit","4dm1n","dbnow_gkj");
-if (mysqli_connect_errno()) {
-printf("Connect failed: %s\n", mysqli_connect_error());
-exit();
-} 
+  $hostSVR19     = "10.0.0.221";
+  $usernameSVR19 = "sa";
+  $passwordSVR19 = "Ind@taichen2024";
+  $databaseSVR19 = "dbnow_gkj"; 
+
+  $connectionInfo = [
+    "Database" => $databaseSVR19,
+    "UID"      => $usernameSVR19,
+    "PWD"      => $passwordSVR19,
+    "CharacterSet" => "UTF-8",
+  ];
+
+  $conGKJ = sqlsrv_connect($hostSVR19, $connectionInfo);
+  if ($conGKJ === false) {
+    die(print_r(sqlsrv_errors(), true));
+  }
 $Zone		= isset($_POST['zone']) ? $_POST['zone'] : '';
 $Lokasi		= isset($_POST['lokasi']) ? $_POST['lokasi'] : '';
 $CKLokasi	= isset($_POST['cklokasi']) ? $_POST['cklokasi'] : '';
@@ -30,8 +41,8 @@ $CKLokasi	= isset($_POST['cklokasi']) ? $_POST['cklokasi'] : '';
                <label for="zone" class="col-md-1">Zone</label>               
                  <select class="form-control select2bs4" style="width: 100%;" name="zone">
 				   <option value="">Pilih</option>	 
-					<?php $sqlZ=mysqli_query($conGKJ," SELECT * FROM tbl_zone order by nama ASC"); 
-					  while($rZ=mysqli_fetch_array($sqlZ)){
+					<?php $sqlZ=sqlsrv_query($conGKJ," SELECT * FROM  dbnow_gkj.tbl_zone order by nama ASC"); 
+					  while($rZ=sqlsrv_fetch_array($sqlZ)){
 					 ?>
                     <option value="<?php echo $rZ['nama'];?>" <?php if($rZ['nama']==$Zone){ echo "SELECTED"; }?>><?php echo $rZ['nama'];?></option>
                     <?php  } ?>
@@ -41,8 +52,8 @@ $CKLokasi	= isset($_POST['cklokasi']) ? $_POST['cklokasi'] : '';
                     <label for="lokasi" class="col-md-1"><input type="checkbox" value="1" name="cklokasi" <?php if($CKLokasi=="1"){echo "checked";}?> > Location</label>
 					<select class="form-control select2bs4 " style="width: 100%;" name="lokasi" <?php if($CKLokasi!="1"){ ?> disabled <?php }?>>
                     <option value="">Pilih</option>	 
-					<?php $sqlL=mysqli_query($conGKJ," SELECT * FROM tbl_lokasi WHERE zone='$Zone' order by nama ASC"); 
-					  while($rL=mysqli_fetch_array($sqlL)){
+					<?php $sqlL=sqlsrv_query($conGKJ," SELECT * FROM dbnow_gkj.tbl_lokasi WHERE zone='$Zone' order by nama ASC"); 
+					  while($rL=sqlsrv_fetch_array($sqlL)){
 					 ?>
                     <option value="<?php echo $rL['nama'];?>" <?php if($rL['nama']==$Lokasi){ echo "SELECTED"; }?>><?php echo $rL['nama'];?></option>
                     <?php  } ?>
