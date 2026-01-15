@@ -6,7 +6,8 @@ $TransF		= isset($_POST['transferke']) ? $_POST['transferke'] : '';
 $Ket		= isset($_POST['ket']) ? $_POST['ket'] : '';
 $Gshift		= isset($_POST['gshift']) ? $_POST['gshift'] : '';
 $Demand		= trim($Demand1);
-if($_POST['cari']=="Cari"){
+$Where1     = '';
+if(isset($_POST['cari']) && $_POST['cari']=="Cari"){
 $sqlDB2 = " SELECT SALESORDER.EXTERNALREFERENCE,ITXVIEWKK.PROJECTCODE,ITXVIEWKK.ORDERLINE,ITXVIEWKK.PRODUCTIONORDERCODE 
 FROM DB2ADMIN.SALESORDER SALESORDER LEFT OUTER JOIN DB2ADMIN.ITXVIEWKK ITXVIEWKK ON SALESORDER.CODE=ITXVIEWKK.PROJECTCODE 
 WHERE ITXVIEWKK.DEAMAND ='$Demand' ";
@@ -22,7 +23,7 @@ $sqlDB21 = " SELECT EXTERNALREFERENCE FROM SALESORDERLINE WHERE ORDERLINE='$rowd
 		$PO=$rowdb21['EXTERNALREFERENCE'];
 	}
 }
-if($_POST['cekdata']=="CekData"){
+if(isset($_POST['cekdata']) && $_POST['cekdata']=="CekData"){
 	   $sqlDB2 = " SELECT SALESORDER.EXTERNALREFERENCE,ITXVIEWKK.PROJECTCODE,ITXVIEWKK.ORDERLINE,ITXVIEWKK.PRODUCTIONORDERCODE 
 	   FROM DB2ADMIN.SALESORDER SALESORDER LEFT OUTER JOIN DB2ADMIN.ITXVIEWKK ITXVIEWKK ON SALESORDER.CODE=ITXVIEWKK.PROJECTCODE 
 	   WHERE ITXVIEWKK.DEAMAND ='$Demand' ";
@@ -278,28 +279,43 @@ function checkAll(form1){
 }
 </script>
 <?php 
-if($_POST['transferout']=="TransferOut"){
+if(isset($_POST['transferout']) && $_POST['transferout']=="TransferOut"){
+	
+// helper notifikasi error input/data
+function renderError($title, $text = ''){
+	$title = addslashes($title);
+	$text  = addslashes($text);
+	echo "<script>
+  	$(function() {
+    const Toast = Swal.mixin({
+      toast: false,
+      position: 'middle',
+      showConfirmButton: false,
+      timer: 4000
+    });
+	Toast.fire({
+        icon: 'error',
+        title: '{$title}',
+        text: '{$text}'
+      });
+  });
+  
+</script>";
+}
 	
 function mutasiurut(){
 include "koneksi.php";		
 $format = "10".date("ymd");
-$sql=sqlsrv_query($con,"SELECT TOP 1 transid FROM dbnow_qcf.tbl_prodemand WHERE SUBSTRING(transid,1,8) like '%".$format."%' ORDER BY transid DESC") or die(print_r(sqlsrv_errors(), true));
-$d=sqlsrv_num_rows($sql);
-if($d>0){
+$sql=sqlsrv_query(
+	$con,
+	"SELECT TOP 1 transid FROM dbnow_qcf.tbl_prodemand WHERE SUBSTRING(transid,1,8) like '%".$format."%' ORDER BY transid DESC",
+	[],
+	["Scrollable" => SQLSRV_CURSOR_KEYSET]
+) or die(print_r(sqlsrv_errors(), true));
 $r=sqlsrv_fetch_array($sql);
-$d=$r['transid'];
-$str=SUBSTRING($d,8,2);
-$Urut = (int)$str;
-}else{
-$Urut = 0;
-}
-$Urut = $Urut + 1;
-$Nol="";
-$nilai=2-strlen($Urut);
-for ($i=1;$i<=$nilai;$i++){
-$Nol= $Nol."0";
-}
-$tidbr =$format.$Nol.$Urut;
+$lastTrans = isset($r['transid']) ? $r['transid'] : '';
+$Urut = ($lastTrans !== '') ? (int)substr($lastTrans, -2) + 1 : 1;
+$tidbr =$format.str_pad((string)$Urut, 2, "0", STR_PAD_LEFT);
 return $tidbr;
 }
 $notid=mutasiurut();	
@@ -323,11 +339,11 @@ if($TransF=="GUDANG KAIN JADI"){
 $n=1;	
 $noceklist=1;	
 //$sqlDB20 = " SELECT * FROM ELEMENTSINSPECTION WHERE NUMBERGROUPSHIFT='1' AND NUMBERSHIFT='1'  AND LENGTH(TRIM(ELEMENTCODE))= 13 $Where $Where1 ";
-$sqlDB20 = " SELECT * FROM ELEMENTSINSPECTION WHERE LENGTH(TRIM(ELEMENTCODE))= 13 $Where $Where1 ";	
-$stmt0   = db2_exec($conn1,$sqlDB20, array('cursor'=>DB2_SCROLLABLE));
-    while($rowdb20 = db2_fetch_assoc($stmt0)){
-		if($_POST['cek'][$n]!='') 
-		{
+	$sqlDB20 = " SELECT * FROM ELEMENTSINSPECTION WHERE LENGTH(TRIM(ELEMENTCODE))= 13 $Where $Where1 ";	
+	$stmt0   = db2_exec($conn1,$sqlDB20, array('cursor'=>DB2_SCROLLABLE));
+	    while($rowdb20 = db2_fetch_assoc($stmt0)){
+			if($_POST['cek'][$n]!='') 
+			{
 		$elementC=$_POST['cek'][$n];
 		$sqlDB201 = " SELECT * FROM ELEMENTSINSPECTION WHERE ELEMENTCODE='$elementC' ";
    		$stmt01   = db2_exec($conn1,$sqlDB201, array('cursor'=>DB2_SCROLLABLE));
@@ -373,7 +389,9 @@ $stmt0   = db2_exec($conn1,$sqlDB20, array('cursor'=>DB2_SCROLLABLE));
 		$stmtProdemand = sqlsrv_query($con, $sqlInsertProdemand, $paramsProdemand);
 
 		if ($stmtProdemand === false) {
-			die("ERROR INSERT tbl_prodemand : <pre>" . print_r(sqlsrv_errors(), true) . "</pre>");
+			$msgErr = print_r(sqlsrv_errors(), true);
+			renderError('Gagal simpan detail Transfer Out', $msgErr);
+			return;
 		}
 	   }else{
 		$noceklist++;
@@ -414,7 +432,9 @@ echo "<script>
 	$stmtMutasi = sqlsrv_query($con, $sqlInsertMutasi, $paramsMutasi);
 
 	if ($stmtMutasi === false) {
-		die("ERROR INSERT tbl_mutasi_kain : <pre>" . print_r(sqlsrv_errors(), true) . "</pre>");
+		$msgErr = print_r(sqlsrv_errors(), true);
+		renderError('Gagal menyimpan header Mutasi Kain', $msgErr);
+		return;
 	}
 
  echo "<script>
