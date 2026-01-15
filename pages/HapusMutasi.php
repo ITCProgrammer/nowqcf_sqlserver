@@ -69,17 +69,45 @@ if ($_GET['no_mutasi']!=""){
                   </thead>
                   <tbody>
 	<?php
-$no=1;   
-$c=0;
-$sql=mysqli_query($con,"SELECT *,count(b.transid) as jmlrol,a.transid as kdtrans, 
-SUM(if(b.grade=1,weight,0)) as grade_a,SUM(if(b.grade=2,weight,0)) as grade_b,
-SUM(if(b.grade=3,weight,0)) as grade_c,
-SUM(if(b.grade=1 or b.grade=2,1,0)) as rol_ab,SUM(if(b.grade=3,1,0)) as rol_c,
-sum(b.`length`) as panjang, group_concat(distinct b.ket_c) as ketc FROM tbl_mutasi_kain a 
-LEFT JOIN tbl_prodemand b ON a.transid=b.transid 
-WHERE a.no_mutasi='$NoMutasi'
-GROUP BY a.transid");
-while($r=mysqli_fetch_array($sql)){	
+    $no=1;   
+    $c=0;
+    $sqlText = " SELECT
+        a.transid AS kdtrans,
+        MAX(b.demandcode) AS demandcode,
+        MAX(b.no_mc) AS no_mc,
+        MAX(b.satuan) AS satuan,
+        COUNT(b.transid) AS jmlrol,
+        SUM(CASE WHEN b.grade = 'A' THEN b.weight ELSE 0 END) AS grade_a,
+        SUM(CASE WHEN b.grade = 'B' THEN b.weight ELSE 0 END) AS grade_b,
+        SUM(CASE WHEN b.grade = 'C' THEN b.weight ELSE 0 END) AS grade_c,
+        SUM(CASE WHEN b.grade IN ('A','B') THEN 1 ELSE 0 END) AS rol_ab,
+        SUM(CASE WHEN b.grade = 'C' THEN 1 ELSE 0 END) AS rol_c,
+        SUM(b.[length]) AS panjang,
+        MAX(ket.ketc) AS ketc
+        FROM dbnow_qcf.tbl_mutasi_kain a
+        LEFT JOIN dbnow_qcf.tbl_prodemand b
+            ON a.transid = b.transid
+        OUTER APPLY (
+            SELECT STUFF((
+                SELECT DISTINCT ',' + b2.ket_c
+                FROM dbnow_qcf.tbl_prodemand b2
+                WHERE b2.transid = a.transid
+                  AND b2.ket_c IS NOT NULL
+                FOR XML PATH(''), TYPE
+            ).value('.', 'nvarchar(max)'), 1, 1, '') AS ketc
+        ) ket
+        WHERE
+            a.no_mutasi = ?
+        GROUP BY
+            a.transid;
+    ";
+
+    $sql = sqlsrv_query($con, $sqlText, [$NoMutasi]);
+    if ($sql === false) {
+      echo "<pre>"; print_r(sqlsrv_errors()); echo "</pre>"; exit;
+    }
+
+while($r=sqlsrv_fetch_array($sql)){	
 	$sqlDB2 = " SELECT LANGGANAN, BUYER, PO_NUMBER, QTY_BRUTO , SALESORDERCODE, NO_ITEM, 
 SUBCODE02, SUBCODE03 ,ITEMDESCRIPTION ,LEBAR, GRAMASI,PRODUCTIONORDERCODE,
 WARNA ,NO_WARNA FROM ITXVIEWLAPORANAFTERSALES WHERE CODE ='$r[demandcode]' GROUP BY CODE,NO_WARNA,WARNA,LANGGANAN, BUYER, PO_NUMBER, SALESORDERCODE, NO_ITEM, 
@@ -118,9 +146,9 @@ $rowdb2 = db2_fetch_assoc($stmt);
       }
       echo $rol1;?>
       </td>
-      <td style="text-align: right"><?php echo $r['grade_a']; ?></td>
-      <td style="text-align: right"><?php echo $r['grade_b']; ?></td>
-      <td style="text-align: right"><?php echo $r['grade_c']; ?></td>
+      <td style="text-align: right"><?php echo number_format((float)($r['grade_a'] ?? 0), 2, '.', ''); ?></td>
+      <td style="text-align: right"><?php echo number_format((float)($r['grade_b'] ?? 0), 2, '.', ''); ?></td>
+      <td style="text-align: right"><?php echo number_format((float)($r['grade_c'] ?? 0), 2, '.', ''); ?></td>
       <td style="text-align: right">
         <?php if ($rowlth['gshift']=="KRAH") {
           echo "<center>-</center>";
