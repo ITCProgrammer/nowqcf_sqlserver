@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>Import Excel Ke MySQL dengan PHP - www.malasngoding.com</title>
+	<title>Import Excel Ke SQL Server dengan PHP</title>
 </head>
 <body>
 	<style type="text/css">
@@ -13,8 +13,7 @@
 			color: green;
 		}
 	</style>
-	<h2>IMPORT EXCEL KE MYSQL DENGAN PHP</h2>
-	<h3>www.malasngoding.com</h3>
+	<h2>IMPORT EXCEL KE SQL SERVER DENGAN PHP</h2>
  
 	<?php 
 	if(isset($_GET['berhasil'])){
@@ -33,8 +32,11 @@
 		<?php 
 		include 'koneksi.php';
 		$no=1;
-		$data = mysqli_query($mysqli,"select * from data_pegawai");
-		while($d = mysqli_fetch_array($data)){
+		$data = sqlsrv_query($con,"SELECT id, nama, alamat, telepon FROM dbnow_qcf.data_pegawai");
+		if ($data === false) {
+			die("Gagal mengambil data: <pre>" . print_r(sqlsrv_errors(), true) . "</pre>");
+		}
+		while($d = sqlsrv_fetch_array($data)){
 			?>
 			<tr>
 				<th><?php echo $no++; ?></th>

@@ -2,11 +2,6 @@
 <!-- www.malasngoding.com -->
  
 <?php 
-// menghubungkan dengan koneksi
-//include 'koneksi.php';
-// menghubungkan dengan library excel reader
-//include "excel_reader2.php";
-//include "SpreadsheetReader.php";
 require('excel_reader2.php');
 require('SpreadsheetReader.php');
 require('koneksi.php');
@@ -35,8 +30,15 @@ for ($i=2; $i<=$jumlah_baris; $i++){
 	$telepon  = $data->val($i, 3);
  
 	if($nama != "" && $alamat != "" && $telepon != ""){
-		// input data ke database (table data_pegawai)
-		mysqli_query($mysqli,"INSERT into data_pegawai values('','$nama','$alamat','$telepon')");
+		// input data ke database (table data_pegawai) via SQL Server
+		$insertQuery = "INSERT INTO dbnow_qcf.data_pegawai (nama, alamat, telepon) VALUES (?, ?, ?)";
+		$stmt = sqlsrv_query($con, $insertQuery, [$nama, $alamat, $telepon]);
+		if ($stmt === false) {
+			// hentikan proses dan beri pesan saat ada kegagalan insert
+			$msgErr = print_r(sqlsrv_errors(), true);
+			unlink($_FILES['filepegawai']['name']);
+			die("Gagal import data: <pre>{$msgErr}</pre>");
+		}
 		$berhasil++;
 	}
 }

@@ -1,8 +1,14 @@
-<?php 
-//$koneksi = mysqli_query("localhost","root","","h_php");
-	$dbHost = "10.0.0.10";
-	$dbDatabase = "h_php";
-	$dbPasswrod = "4dm1n";
-	$dbUser = "dit";
-	$mysqli = new mysqli($dbHost, $dbUser, $dbPasswrod, $dbDatabase);
-?>
+<?php
+date_default_timezone_set('Asia/Jakarta');
+
+// Koneksi ke SQL Server mengikuti konfigurasi utama
+$hostSVR19      = "10.0.0.221";
+$usernameSVR19  = "sa";
+$passwordSVR19  = "Ind@taichen2024";
+$nowqcf         = "dbnow_qcf";
+$dbnow_qcf      = array("Database" => $nowqcf, "UID" => $usernameSVR19, "PWD" => $passwordSVR19);
+$con            = sqlsrv_connect($hostSVR19, $dbnow_qcf);
+
+if ($con === false) {
+    die("Koneksi SQL Server gagal: <pre>" . print_r(sqlsrv_errors(), true) . "</pre>");
+}
