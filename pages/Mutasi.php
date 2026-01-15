@@ -220,28 +220,43 @@ function checkAll(form1){
 }
 </script>
 <?php 
-if($_POST['mutasikain']=="MutasiKain"){
+if(isset($_POST['mutasikain']) && $_POST['mutasikain']=="MutasiKain"){
+
+// helper notifikasi error input/data
+function renderError($title, $text = ''){
+	$title = addslashes($title);
+	$text  = addslashes($text);
+	echo "<script>
+  	$(function() {
+    const Toast = Swal.mixin({
+      toast: false,
+      position: 'middle',
+      showConfirmButton: false,
+      timer: 4000
+    });
+	Toast.fire({
+        icon: 'error',
+        title: '{$title}',
+        text: '{$text}'
+      });
+  });
+  
+</script>";
+}
 	
 function mutasiurut(){
 include "koneksi.php";		
 $format = "20".date("ymd");
-$sql=sqlsrv_query($con,"SELECT TOP 1 no_mutasi FROM dbnow_qcf.tbl_mutasi_kain WHERE SUBSTRING(no_mutasi,1,8) like '%".$format."%' ORDER BY no_mutasi DESC ") or die(print_r(sqlsrv_errors(), true));
-$d=sqlsrv_num_rows($sql);
-if($d>0){
+$sql=sqlsrv_query(
+	$con,
+	"SELECT TOP 1 no_mutasi FROM dbnow_qcf.tbl_mutasi_kain WHERE SUBSTRING(no_mutasi,1,8) like '%".$format."%' ORDER BY no_mutasi DESC ",
+	[],
+	["Scrollable" => SQLSRV_CURSOR_KEYSET]
+) or die(print_r(sqlsrv_errors(), true));
 $r=sqlsrv_fetch_array($sql);
-$d=$r['no_mutasi'];
-$str=SUBSTRING($d,8,2);
-$Urut = (int)$str;
-}else{
-$Urut = 0;
-}
-$Urut = $Urut + 1;
-$Nol="";
-$nilai=2-strlen($Urut);
-for ($i=1;$i<=$nilai;$i++){
-$Nol= $Nol."0";
-}
-$tidbr =$format.$Nol.$Urut;
+$lastNo = isset($r['no_mutasi']) ? $r['no_mutasi'] : '';
+$Urut = ($lastNo !== '') ? (int)substr($lastNo, -2) + 1 : 1;
+$tidbr =$format.str_pad((string)$Urut, 2, "0", STR_PAD_LEFT);
 return $tidbr;
 }
 $nomid=mutasiurut();	
@@ -279,7 +294,11 @@ while ($r1 = sqlsrv_fetch_array($sql1, SQLSRV_FETCH_ASSOC)) {
     ";
 
     $upd = sqlsrv_query($con, $updText, [$nomid, $transid1]);
-    if ($upd === false) { echo "<pre>"; print_r(sqlsrv_errors()); echo "</pre>"; exit; }
+    if ($upd === false) {
+		$msgErr = print_r(sqlsrv_errors(), true);
+		renderError('Gagal update data Mutasi Kain', $msgErr);
+		return;
+	}
 
   } else {
     $noceklist1++;
