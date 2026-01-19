@@ -366,24 +366,23 @@ $noceklist=1;
 		$ketc=$rowdb203['LONGDESCRIPTION'];	
 		}else{$ketc="";}	
 		$sqlInsertProdemand = " INSERT INTO dbnow_qcf.tbl_prodemand (
-			transid, gshift, demandcode, itemelement,
-			weight, length, no_mc, grade,
-			satuan, ket, ket_c, tgl_buat
+			transid, demandcode, itemelement, weight, length,
+			satuan, no_mc, grade, ket_c, ket, gshift, tgl_buat
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())
 		";
 
 		$paramsProdemand = [
 			$notid,
-			$Gshift,
 			$rowdb201['DEMANDCODE'],
 			$rowdb201['ELEMENTCODE'],
 			$rowdb201['WEIGHTNET'],
 			$rowdb201['LENGTHGROSS'],
+			$rowdb201['LENGTHUOMCODE'],
 			$rowdb201['WINDINGMACHINE'],
 			$grade1,
-			$rowdb201['LENGTHUOMCODE'],
+			$ketc,
 			$rowdb202['LONGDESCRIPTION'],
-			$ketc
+			$Gshift
 		];
 
 		$stmtProdemand = sqlsrv_query($con, $sqlInsertProdemand, $paramsProdemand);
