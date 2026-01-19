@@ -365,13 +365,21 @@ $noceklist=1;
 		if($grade1=="C"){
 		$ketc=$rowdb203['LONGDESCRIPTION'];	
 		}else{$ketc="";}	
-		$sqlInsertProdemand = " INSERT INTO dbnow_qcf.tbl_prodemand (
-			transid, demandcode, itemelement, weight, length,
+		$stmtNext = sqlsrv_query($con, "SELECT ISNULL(MAX(id),0)+1 AS next_id FROM dbnow_qcf.tbl_prodemand");
+		if ($stmtNext === false) {
+			echo "<pre>GAGAL ambil next_id:\n".print_r(sqlsrv_errors(SQLSRV_ERR_ALL),true)."</pre>";
+			exit;
+		}
+		$rowNext = sqlsrv_fetch_array($stmtNext, SQLSRV_FETCH_ASSOC);
+		$nextId  = (int)$rowNext['next_id'];
+
+		$sqlInsertProdemand = "INSERT INTO dbnow_qcf.tbl_prodemand (
+			id, transid, demandcode, itemelement, weight, length,
 			satuan, no_mc, grade, ket_c, ket, gshift, tgl_buat
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())
-		";
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())";
 
 		$paramsProdemand = [
+			$nextId,
 			$notid,
 			$rowdb201['DEMANDCODE'],
 			$rowdb201['ELEMENTCODE'],
@@ -386,6 +394,22 @@ $noceklist=1;
 		];
 
 		$stmtProdemand = sqlsrv_query($con, $sqlInsertProdemand, $paramsProdemand);
+		// if ($stmtProdemand === false) {
+		// 	echo "<pre style='background:#300;color:#fff;padding:10px;white-space:pre-wrap'>";
+		// 	echo "INSERT DETAIL (tbl_prodemand) GAGAL\n\n";
+		// 	echo "SQL:\n".$sqlInsertProdemand."\n\n";
+		// 	echo "PARAMS:\n".print_r($paramsProdemand, true)."\n\n";
+		// 	echo "ERRORS:\n".print_r(sqlsrv_errors(SQLSRV_ERR_ALL), true);
+		// 	echo "</pre>";
+		// 	exit;
+		// } else {
+		// 	echo "<pre style='background:#030;color:#fff;padding:10px;white-space:pre-wrap'>";
+		// 	echo "INSERT DETAIL (tbl_prodemand) BERHASIL\n\n";
+		// 	echo "SQL:\n".$sqlInsertProdemand."\n\n";
+		// 	echo "PARAMS:\n".print_r($paramsProdemand, true)."\n";
+		// 	echo "</pre>";
+		// 	// exit;
+		// }
 
 		if ($stmtProdemand === false) {
 			$msgErr = print_r(sqlsrv_errors(), true);
@@ -415,13 +439,22 @@ echo "<script>
   
 </script>";
 }else{
-	$sqlInsertMutasi = "
-	INSERT INTO dbnow_qcf.tbl_mutasi_kain (
-		transid, ket, tujuan, gshift, tgl_buat
-	) VALUES (?, ?, ?, ?, GETDATE())
+	$stmtNext = sqlsrv_query($con, "SELECT ISNULL(MAX(id),0)+1 AS next_id FROM dbnow_qcf.tbl_mutasi_kain");
+
+	if ($stmtNext === false) {
+		echo "<pre>GAGAL ambil next_id tbl_mutasi_kain:\n".print_r(sqlsrv_errors(SQLSRV_ERR_ALL),true)."</pre>";
+		exit;
+	}
+	$rowNext = sqlsrv_fetch_array($stmtNext, SQLSRV_FETCH_ASSOC);
+	$nextIdMutasi = (int)$rowNext['next_id'];
+
+	$sqlInsertMutasi = " INSERT INTO dbnow_qcf.tbl_mutasi_kain (
+		id, transid, ket, tujuan, gshift, tgl_buat
+	) VALUES (?, ?, ?, ?, ?, GETDATE())
 	";
 
 	$paramsMutasi = [
+		$nextIdMutasi,
 		$notid,
 		$Ket,
 		$TransF,
@@ -429,6 +462,22 @@ echo "<script>
 	];
 
 	$stmtMutasi = sqlsrv_query($con, $sqlInsertMutasi, $paramsMutasi);
+	// if ($stmtMutasi === false) {
+	// 	if (ob_get_length()) ob_clean();
+	// 	echo "<pre style='background:#300;color:#fff;padding:10px;white-space:pre-wrap'>";
+	// 	echo "INSERT HEADER (tbl_mutasi_kain) GAGAL\n\n";
+	// 	echo "SQL:\n".$sqlInsertMutasi."\n\n";
+	// 	echo "PARAMS:\n".print_r($paramsMutasi, true)."\n\n";
+	// 	echo "ERRORS:\n".print_r(sqlsrv_errors(SQLSRV_ERR_ALL), true);
+	// 	echo "</pre>";
+	// 	exit;
+	// } else {
+	// 	echo "<pre style='background:#030;color:#fff;padding:10px;white-space:pre-wrap'>";
+	// 	echo "INSERT HEADER (tbl_mutasi_kain) BERHASIL\n\n";
+	// 	echo "SQL:\n".$sqlInsertMutasi."\n\n";
+	// 	echo "PARAMS:\n".print_r($paramsMutasi, true)."\n";
+	// 	// exit;
+	// }
 
 	if ($stmtMutasi === false) {
 		$msgErr = print_r(sqlsrv_errors(), true);
