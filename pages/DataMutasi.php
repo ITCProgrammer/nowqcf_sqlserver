@@ -91,6 +91,7 @@ $Demand	= isset($_POST['demandno']) ? $_POST['demandno'] : '';
               $WMutasi
               $WDemand
           GROUP BY a.no_mutasi
+		  ORDER BY a.no_mutasi DESC	
       ");
       while($r=sqlsrv_fetch_array($sql)){				  
 	  ?>
